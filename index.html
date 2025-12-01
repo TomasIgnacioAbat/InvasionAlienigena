@@ -1,23 +1,28 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Juego PixiJS</title>
+<html>
+  <head>
     <style>
-        body { 
-            margin: 0; 
-            padding: 0; 
-            overflow: hidden; /* Evita barras de desplazamiento */
-            background-color: #1099bb; /* Color de fondo de la web */
-        }
-        canvas {
-            display: block; /* Elimina márgenes extraños del canvas */
-        }
+      body {
+        margin: 0px;
+      }
     </style>
-    <script src="https://pixijs.download/v7.x/pixi.min.js"></script>
-</head>
-<body>
-    <script src="src/main.js"></script>
-</body>
+
+    <!-- importamos los scripts -->
+    <script src="scripts/auxiliares.js"></script>
+    <script src="scripts/pixi.js"></script> 
+    <script src="scripts/juego.js"></script> 
+    <script src="scripts/classGameObject.js"></script>
+    <script src="scripts/classPersona.js"></script>
+    <script src="scripts/classObjetoEstatico.js"></script>
+    <script src="scripts/classPersonaComprador.js"></script>
+    <script src="scripts/classTienda.js"></script>
+
+  </head>
+
+  <body>
+    <script>
+      // todo empieza aca (Entry Point).
+      // creamos una instancia de la clase juego
+      const juego = new Juego();
+    </script>
+  </body>
 </html>

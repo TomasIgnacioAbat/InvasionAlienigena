@@ -1,0 +1,25 @@
+{"frames": {
+
+"tiendaRoja.png":
+{
+	"frame": {"x":0,"y":0,"w":1024,"h":1024},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":1024,"h":1024},
+	"sourceSize": {"w":1024,"h":1024}
+}},
+  "animations": {
+    "tiendaRoja": [
+      "tiendaRoja.png"
+    ]
+  },
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.1",
+	"image": "tiendaRoja.png",
+	"format": "RGBA8888",
+	"size": {"w":1024,"h":1024},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:f05e4e6585cec9a9905b18f206ccfaba:191bf532b3442a31792b4f45e8e65dda:96ee2434993421dad2c9d2aeff9008f0$"
+}
+}
