@@ -1,28 +1,38 @@
 <html>
-  <head>
+
+<head>
+
     <style>
-      body {
-        margin: 0px;
-      }
+        body {
+            margin: 0px
+        }
     </style>
 
-    <!-- importamos los scripts -->
-    <script src="scripts/auxiliares.js"></script>
-    <script src="scripts/pixi.js"></script> 
-    <script src="scripts/juego.js"></script> 
-    <script src="scripts/classGameObject.js"></script>
-    <script src="scripts/classPersona.js"></script>
-    <script src="scripts/classObjetoEstatico.js"></script>
-    <script src="scripts/classPersonaComprador.js"></script>
-    <script src="scripts/classTienda.js"></script>
+    <script src="utils.js"></script>
 
-  </head>
+    <!-- importamos pixi -->
+    <script src="pixi.js"></script>
+    <!-- importamos la clase juego -->
+    <script src="juego.js"></script>
+    <script src="gameObject.js"></script>
+    <!-- y cada conejito -->
+    <script src="conejito.js"></script>
 
-  <body>
+
+</head>
+
+<body>
     <script>
-      // todo empieza aca (Entry Point).
-      // creamos una instancia de la clase juego
-      const juego = new Juego();
+
+
+
+        // todo empieza aca (Entry Point).
+        // creamos una instancia de la clase juego
+        const juego = new Juego()
+
+
     </script>
-  </body>
+
+</body>
+
 </html>
