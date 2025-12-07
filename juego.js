@@ -3,7 +3,6 @@ class Juego {
   conejitos = [];
   width;
   height;
-  // Agregamos una propiedad para guardar la textura y que sea accesible desde todo el juego
   animacionesPersonaje1; 
   score = 0;
   scoreText;
@@ -22,32 +21,27 @@ class Juego {
     globalThis.__PIXI_APP__ = this.pixiApp;
 
     const opcionesDePixi = {
-      background: "#1099bb", // Aquí aseguramos que el fondo se vea azul
+      background: "#1099bb",
       width: this.width,
       height: this.height,
       antialias: false,
       SCALE_MODE: PIXI.SCALE_MODES.NEAREST,
     };
 
-    // Inicializamos la app
     await this.pixiApp.init(opcionesDePixi);
-
-    // IMPORTANTE: Agregamos el canvas al HTML (si falta esto, no ves nada)
     document.body.appendChild(this.pixiApp.canvas);
 
     // Carga de assets
-    // Await asegura que no sigamos hasta que la imagen exista
     const texture = await PIXI.Assets.load("bunny.png");
-    
-    // IMPORTANTE: Usamos 'this.' para guardar la animación en la clase
-    // así la función 'generarConejitoEnBorde' puede usarla después.
-    this.animacionesPersonaje1 = await PIXI.Assets.load("img/personaje.json");
+    this.animacionesPersonaje1 = await PIXI.Assets.load("img/Alienigena Guerrero.json");
+
+    // Configuración del Texto de Puntaje
     const estiloTexto = new PIXI.TextStyle({
         fontFamily: 'Arial',
         fontSize: 36,
         fontWeight: 'bold',
-        fill: '#ffffff', // Color blanco
-        stroke: '#000000', // Borde negro para que se lea bien
+        fill: '#ffffff',
+        stroke: '#000000',
         strokeThickness: 4,
         dropShadow: true,
         dropShadowColor: '#000000',
@@ -57,99 +51,45 @@ class Juego {
     });
 
     this.scoreText = new PIXI.Text({ text: 'Puntos: 0', style: estiloTexto });
-    this.scoreText.x = 20; // Margen izquierdo
-    this.scoreText.y = 20; // Margen superior
-    
-    // Lo agregamos al escenario
+    this.scoreText.x = 20;
+    this.scoreText.y = 20;
     this.pixiApp.stage.addChild(this.scoreText);
-    // -----------------------------------------
 
+    // --- CONFIGURACIÓN DE APARICIÓN ---
+    // Solo usamos este intervalo (el de grupo). Borré el otro que daba error.
     setInterval(() => {
-      this.generarConejitoEnemigo();
-    }, 800); 
+      this.generarGrupoEnemigo();
+    }, 600);
 
+    // --- GAME LOOP ---
+    // Solo se agrega UNA vez
     this.pixiApp.ticker.add(this.gameLoop.bind(this));
     
-    this.agregarInteractividadDelMouse();
-
-    // Configuración de eventos de clic
+    // --- INTERACTIVIDAD ---
+    this.agregarInteractividadDelMouse(); // Para actualizar la posición x,y del mouse
+    
+    // Configuración de eventos de clic (Disparo)
     this.pixiApp.stage.eventMode = 'static';
     this.pixiApp.stage.hitArea = this.pixiApp.screen;
+    // Solo agregamos el evento una vez
     this.pixiApp.stage.on('pointerdown', (e) => this.disparar(e));
     
     this.pixiApp.canvas.style.cursor = "crosshair";
-
-    // Iniciamos el intervalo para crear conejitos cada 1 segundo (1000ms)
-    // Usamos arrow function () => para no perder el 'this'
-    setInterval(() => {
-      this.generarConejitoEnemigo();
-    }, 800);
-
-    // Agregamos el Game Loop
-    this.pixiApp.ticker.add(this.gameLoop.bind(this));
-    
-    // Mouse (opcional si ya no lo persiguen, pero útil dejarlo)
-    this.agregarInteractividadDelMouse();
-    // NUEVO: Escuchar el clic para disparar
-    // Usamos 'pointerdown' que funciona para mouse y toque en pantallas tactiles
-    this.pixiApp.stage.eventMode = 'static';
-    this.pixiApp.stage.hitArea = this.pixiApp.screen;
-    this.pixiApp.stage.on('pointerdown', (e) => this.disparar(e));
-    
-    // OPCIONAL: Cambiar el cursor a una mira (crosshair)
-    this.pixiApp.canvas.style.cursor = "crosshair";
-  }
-
-  generarConejitoEnemigo() {
-    if (!this.animacionesPersonaje1) return;
-
-    const saleDeIzquierda = Math.random() > 0.5;
-    
-    // MARGENES: Definimos un padding para que no salgan cortados arriba o abajo
-    const margenVertical = 80; 
-    // Calculamos una Y aleatoria respetando los márgenes
-    const y = Math.random() * (this.height - margenVertical * 2) + margenVertical;
-
-    let x, objetivoX;
-
-    if (saleDeIzquierda) {
-      x = -50; // Nace a la izquierda
-      objetivoX = this.width + 100; // Va a la derecha
-    } else {
-      x = this.width + 50; // Nace a la derecha
-      objetivoX = -100; // Va a la izquierda
-    }
-
-    const conejito = new Conejito(this.animacionesPersonaje1, x, y, this);
-    
-    // IMPORTANTE: El objetivo tiene LA MISMA 'y' que el origen.
-    // Esto garantiza que camine en línea recta horizontal.
-    conejito.asignarTarget({ posicion: { x: objetivoX, y: y } });
-    
-    // Ajustamos velocidad para que sea un reto (puedes variarlo)
-    conejito.velocidadMaxima = 3; 
-    conejito.distanciaParaLlegar = 10; 
-
-    this.conejitos.push(conejito);
   }
 
   agregarInteractividadDelMouse() {
     this.pixiApp.canvas.onmousemove = (event) => {
-      // Ajuste simple para coordenadas relativas al canvas si fuera necesario
-      // pero con tu css actual event.x suele funcionar bien si el canvas está en 0,0
       this.mouse.posicion = { x: event.x, y: event.y };
     };
   }
 
   gameLoop(time) {
-    // Iteramos al revés para poder borrar elementos sin romper el loop
     for (let i = this.conejitos.length - 1; i >= 0; i--) {
       const unConejito = this.conejitos[i];
 
       unConejito.tick();
       unConejito.render();
 
-      // Limpieza: si se salen mucho del margen, los borramos
       if (unConejito.posicion.x < -100 || unConejito.posicion.x > this.width + 100) {
         this.pixiApp.stage.removeChild(unConejito.container);
         this.conejitos.splice(i, 1);
@@ -157,47 +97,85 @@ class Juego {
     }
   }
 
-  // Métodos viejos que quizás ya no uses, pero no molestan si se quedan
-  getConejitoRandom() {
-    return this.conejitos[Math.floor(this.conejitos.length * Math.random())];
-  }
   disparar(evento) {
-    // Obtenemos la posición del clic global
     const clickPos = evento.global;
+    
+    // Variable para saber si matamos a alguien en este clic (para efectos visuales)
+    let muertosEnEsteTiro = 0;
 
-    // Recorremos el array al revés para poder borrar sin romper el loop
+    // Recorremos el array al revés
     for (let i = this.conejitos.length - 1; i >= 0; i--) {
       const cone = this.conejitos[i];
-
-      // Calculamos distancia entre el clic y el centro del conejo
-      // Usamos tu función utilitaria 'calcularDistancia'
-      // Nota: clickPos tiene x e y, cone.posicion también.
       const distancia = calcularDistancia(clickPos, cone.posicion);
 
-      // Si la distancia es menor al radio del conejo (aprox 30-40px visualmente)
-      // Ajusta este valor 40 según qué tan grande se vea tu sprite
       const radioHitbox = 80; 
 
       if (distancia < radioHitbox) {
-        
-        // --- NUEVO: SUMAR PUNTOS ---
+        // ¡IMPACTO!
         this.score++; 
-        // Actualizamos el texto en pantalla
-        this.scoreText.text = "Puntos: " + this.score;
-        // ---------------------------
+        muertosEnEsteTiro++;
 
-        console.log("Conejo eliminado! Total: " + this.score);
-
+        // Eliminamos al conejo (Visual y Lógico)
         this.pixiApp.stage.removeChild(cone.container);
         this.conejitos.splice(i, 1);
         
-        // Efecto visual extra: Hacemos que el texto "salte" un poco al sumar
-        // (Opcional, pero queda bonito)
-        this.scoreText.scale.set(1.5);
-        setTimeout(() => this.scoreText.scale.set(1), 100);
-
-        break;
+        // --- CAMBIO CLAVE: BORRAMOS EL 'break' ---
+        // Al no poner 'break', el bucle sigue buscando más víctimas 
+        // en la misma posición del clic.
       }
     }
+
+    // Si hubo bajas en este clic, actualizamos el texto
+    if (muertosEnEsteTiro > 0) {
+       this.scoreText.text = "Puntos: " + this.score;
+       
+       console.log(`¡Masacre! Eliminaste a ${muertosEnEsteTiro} de un solo tiro.`);
+
+       // Efecto de "salto" del texto para dar feedback
+       this.scoreText.scale.set(1.5);
+       setTimeout(() => this.scoreText.scale.set(1), 100);
+    }
+  }
+
+  generarGrupoEnemigo() {
+    if (!this.animacionesPersonaje1) return;
+
+    const saleDeIzquierda = Math.random() > 0.5;
+    const margenVertical = 180;
+    const alturaBase = Math.random() * (this.height - margenVertical * 2) + margenVertical;
+    
+    const cantidad = Math.floor(Math.random() * (8 - 6 + 1) + 6);
+
+    let baseX, objetivoXBase;
+
+    if (saleDeIzquierda) {
+      baseX = -50; 
+      objetivoXBase = this.width + 100;
+    } else {
+      baseX = this.width + 50; 
+      objetivoXBase = -100; 
+    }
+
+    for (let i = 0; i < cantidad; i++) {
+      const desfaseX = Math.random() * 100; 
+      const desfaseY = (Math.random() * 60) - 30; 
+
+      const spawnX = saleDeIzquierda ? (baseX - desfaseX) : (baseX + desfaseX);
+      const spawnY = alturaBase + desfaseY;
+
+      const conejito = new Conejito(this.animacionesPersonaje1, spawnX, spawnY, this);
+      
+      conejito.asignarTarget({ posicion: { x: objetivoXBase, y: spawnY } });
+      
+      conejito.velocidadMaxima = 2.5 + Math.random();
+      conejito.distanciaParaLlegar = 10; 
+
+      this.conejitos.push(conejito);
+    }
+  }
+  
+  // Métodos viejos
+  getConejitoRandom() {
+    return this.conejitos[Math.floor(this.conejitos.length * Math.random())];
   }
 }

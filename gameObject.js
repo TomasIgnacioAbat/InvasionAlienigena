@@ -73,7 +73,7 @@ class GameObject {
       this.spritesAnimados[key].play();
       this.spritesAnimados[key].loop = true;
       this.spritesAnimados[key].animationSpeed = 0.1;
-      this.spritesAnimados[key].scale.set(2);
+      this.spritesAnimados[key].scale.set(1.5);
       this.spritesAnimados[key].anchor.set(0.5, 1);
 
       this.container.addChild(this.spritesAnimados[key]);
@@ -86,6 +86,9 @@ class GameObject {
 
     // Solo perseguimos al objetivo final (el otro lado de la pantalla)
     this.perseguir(); 
+    // --- CAMBIO 2: ACTIVAR MURALLAS ---
+    this.evitarMurosVerticales();
+    // ---------------------------------
     
     // DESACTIVAMOS comportamientos de manada para que no se desvíen
     // this.separacion();  // <-- Comentado para que no se empujen hacia arriba/abajo
@@ -325,5 +328,24 @@ class GameObject {
       };
       fuerza = limitarVector(fuerza, this.aceleracionMaxima);
       return fuerza;
+  }
+  // En gameObject.js
+
+  evitarMurosVerticales() {
+    const margenSeguridad = 50; // A cuántos pixeles del borde empieza a actuar el muro
+    const fuerzaDeRebote = 1.5; // Qué tan fuerte los empuja (aumenta si quieres que reboten más duro)
+
+    // 1. Muro de Arriba (Top)
+    // Si mi posición Y es menor al margen (estoy muy arriba)...
+    if (this.posicion.y < margenSeguridad) {
+      // ...agrego fuerza positiva en Y (hacia abajo)
+      this.aceleracion.y += fuerzaDeRebote;
+    } 
+    // 2. Muro de Abajo (Bottom)
+    // Si mi posición Y es mayor a la altura del juego menos el margen (estoy muy abajo)...
+    else if (this.posicion.y > this.juego.height - margenSeguridad) {
+      // ...agrego fuerza negativa en Y (hacia arriba)
+      this.aceleracion.y -= fuerzaDeRebote;
+    }
   }
 }
