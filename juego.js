@@ -18,6 +18,7 @@ class Juego {
   musicaFondo;
   sonidoDisparo;
   sonidoGameOver;
+  sonidoVictoria;
 
   constructor() {
     this.width = 1280;
@@ -110,6 +111,9 @@ class Juego {
 
     this.sonidoGameOver = new Audio('sounds/gameover.mp3');
     this.sonidoGameOver.volume = 0.6;
+
+    this.sonidoVictoria = new Audio('sounds/victoria.mp3')
+    this.sonidoVictoria.volume = 0.6;
 
     // Iniciar música al primer click
     window.addEventListener('click', () => {
@@ -248,6 +252,7 @@ class Juego {
     this.gestorOleadas.estadoActual = "VICTORIA"; 
     this.musicaFondo.pause();
     this.musicaFondo.currentTime = 0;
+    this.sonidoVictoria.play().catch(e => console.log("Falta archivo victoria"));
     
     // Si tienes sonido de victoria, ponlo aquí. Si no, silencio.
     // this.sonidoVictoria.play(); 
