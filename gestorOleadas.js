@@ -7,9 +7,8 @@ class GestorDeOleadas {
 
   // Factores de dificultad
   multiplicadorVelocidad = 1.0;
-  tiempoEntreOleadas = 1000; // ms (Empieza con tu valor actual)
+  tiempoEntreOleadas = 800; 
   
-  // Texto para avisar al jugador del cambio de fase
   avisoFaseText;
 
   constructor(juego) {
@@ -20,7 +19,7 @@ class GestorDeOleadas {
   inicializarTextoAviso() {
     const estilo = new PIXI.TextStyle({
       fontFamily: 'Arial', fontSize: 50, fontWeight: 'bold',
-      fill: '#ff0000', // Un solo color rojo (ESTO FUNCIONA)
+      fill: '#ff0000', 
       stroke: '#000000', strokeThickness: 5,
       dropShadow: true, dropShadowBlur: 10,
     });
@@ -37,8 +36,8 @@ class GestorDeOleadas {
     this.avisoFaseText.visible = true;
     this.avisoFaseText.alpha = 1;
     
-    // Efecto simple para desvanecer el texto en 3 segundos
     let fadeOut = setInterval(() => {
+        if(!this.avisoFaseText) { clearInterval(fadeOut); return; }
         this.avisoFaseText.alpha -= 0.05;
         if(this.avisoFaseText.alpha <= 0) {
             this.avisoFaseText.visible = false;
@@ -47,56 +46,73 @@ class GestorDeOleadas {
     }, 100);
   }
 
+  // Método auxiliar para cambiar la velocidad de la música de forma segura
+  ajustarMusica(velocidad) {
+    if (this.juego.musicaFondo) {
+        this.juego.musicaFondo.playbackRate = velocidad;
+    }
+  }
+
   actualizar(deltaSeconds) {
-    // Si ya ganamos, no hacemos nada más
     if (this.estadoActual === "VICTORIA") return;
 
     this.tiempoTranscurrido += deltaSeconds;
 
-    // --- MÁQUINA DE ESTADOS FINITOS (FSM) ---
-
-    // FASE 1: 0 a 30 segundos (NORMAL)
+    // FASE 1: NORMAL (0-30s)
     if (this.tiempoTranscurrido < 30) {
         if (this.estadoActual !== "NORMAL") {
             this.estadoActual = "NORMAL";
             this.multiplicadorVelocidad = 1.0;
-            console.log("Fase: Normal");
+            this.tiempoEntreOleadas = 800;
+            
+            // --- MUSICA NORMAL ---
+            this.ajustarMusica(1.0); 
         }
     }
-    // FASE 2: 30 a 60 segundos (RAPIDO +50%)
+    // FASE 2: RAPIDO (30-60s)
     else if (this.tiempoTranscurrido >= 30 && this.tiempoTranscurrido < 60) {
         if (this.estadoActual !== "RAPIDO") {
             this.estadoActual = "RAPIDO";
-            this.multiplicadorVelocidad = 1.50; // 50% más rápido
-            this.tiempoEntreOleadas = 1000; // Un poco más frecuente también
+            this.multiplicadorVelocidad = 1.5; 
+            this.tiempoEntreOleadas = 700;
             this.mostrarAviso("¡ACELERACIÓN DETECTADA!");
-            console.log("Fase: Rápida");
+            
+            // --- MUSICA RAPIDA (1.1x) ---
+            this.ajustarMusica(1.1); 
         }
     }
-    // FASE 3: 60 a 90 segundos (FRENESI +50%)
+    // FASE 3: FRENESI (60-90s)
     else if (this.tiempoTranscurrido >= 60 && this.tiempoTranscurrido < 90) {
         if (this.estadoActual !== "FRENESI") {
             this.estadoActual = "FRENESI";
-            this.multiplicadorVelocidad = 2; // 100% más rápido
-            this.tiempoEntreOleadas = 1000; // ¡Mucho más frecuente!
+            this.multiplicadorVelocidad = 2; 
+            this.tiempoEntreOleadas = 600; 
             this.mostrarAviso("¡VELOCIDAD MÁXIMA!");
-            console.log("Fase: Frenesí");
+            
+            // --- MUSICA FRENÉTICA (1.2x) ---
+            this.ajustarMusica(1.2); 
         }
     }
-    // FASE 4: > 90 segundos (VICTORIA)
+    // FASE 4: VICTORIA (>90s)
     else if (this.tiempoTranscurrido >= 91) {
         if (this.estadoActual !== "VICTORIA") {
             this.estadoActual = "VICTORIA";
-            this.juego.victoria(); // Llamamos al método de ganar en Juego
+            this.ajustarMusica(1.0); // Restaurar por si acaso (aunque se pausa luego)
+            this.juego.victoria(); 
         }
     }
   }
+
   reiniciar() {
     this.tiempoTranscurrido = 0;
     this.estadoActual = "NORMAL";
     this.multiplicadorVelocidad = 1.0;
-    this.tiempoEntreOleadas = 1000; // O el valor inicial que prefieras
+    this.tiempoEntreOleadas = 800; 
     this.avisoFaseText.visible = false;
+    
+    // --- RESETEAR MUSICA ---
+    this.ajustarMusica(1.0);
+    
     console.log("Gestor reiniciado");
   }
 }

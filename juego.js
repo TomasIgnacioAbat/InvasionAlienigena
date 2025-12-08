@@ -1,6 +1,8 @@
 class Juego {
   pixiApp;
   conejitos = [];
+  // Nuevo array para las partículas de explosión
+  particulas = [];
   width;
   height;
   animacionesPersonaje1; 
@@ -9,9 +11,13 @@ class Juego {
   tiempoInicio;
   timerText;
   
-  // NUEVAS PROPIEDADES
   gestorOleadas;
-  tiempoHastaSiguienteSpawn = 0; // Temporizador interno para spawns
+  tiempoHastaSiguienteSpawn = 0; 
+  
+  // Propiedades de Audio
+  musicaFondo;
+  sonidoDisparo;
+  sonidoGameOver;
 
   constructor() {
     this.width = 1280;
@@ -24,7 +30,6 @@ class Juego {
     this.pixiApp = new PIXI.Application();
 
     this.pixiApp.stage.name = "el stage";
-    // IMPORTANTE: Para que el zIndex funcione
     this.pixiApp.stage.sortableChildren = true;
     globalThis.__PIXI_APP__ = this.pixiApp;
 
@@ -38,25 +43,24 @@ class Juego {
 
     await this.pixiApp.init(opcionesDePixi);
     document.body.appendChild(this.pixiApp.canvas);
-    // --- NUEVO: FONDO ---
-    // Cargamos la textura del fondo
-    const texturaFondo = await PIXI.Assets.load("img/fondo.png");
-    const fondo = new PIXI.Sprite(texturaFondo);
-    
-    // Aseguramos que cubra toda la pantalla
-    fondo.width = this.width;
-    fondo.height = this.height;
-    
-    // Lo mandamos al fondo del todo con zIndex bajo
-    fondo.zIndex = -1000; 
-    
-    this.pixiApp.stage.addChild(fondo);
-    // --------------------
+
+    // --- FONDO ---
+    // Intenta cargar fondo.png, si no existe no pasa nada (catch)
+    try {
+        const texturaFondo = await PIXI.Assets.load("img/fondo.png");
+        const fondo = new PIXI.Sprite(texturaFondo);
+        fondo.width = this.width;
+        fondo.height = this.height;
+        fondo.zIndex = -1000; 
+        this.pixiApp.stage.addChild(fondo);
+    } catch (e) {
+        console.log("No se encontró img/fondo.png, usando color base.");
+    }
 
     const texture = await PIXI.Assets.load("bunny.png");
     this.animacionesPersonaje1 = await PIXI.Assets.load("img/personaje.json");
 
-    // Textos (Score y Timer)
+    // UI - TEXTOS
     const estiloTexto = new PIXI.TextStyle({
         fontFamily: 'Arial', fontSize: 36, fontWeight: 'bold',
         fill: '#ffffff', stroke: '#000000', strokeThickness: 4,
@@ -65,6 +69,7 @@ class Juego {
     this.scoreText = new PIXI.Text({ text: 'Puntos: 0', style: estiloTexto });
     this.scoreText.x = 20;
     this.scoreText.y = 20;
+    this.scoreText.zIndex = 8000; // UI Arriba
     this.pixiApp.stage.addChild(this.scoreText);
 
     const estiloTimer = new PIXI.TextStyle({
@@ -76,28 +81,45 @@ class Juego {
     this.timerText.anchor.set(0.5, 0); 
     this.timerText.x = this.width / 2;
     this.timerText.y = 20; 
+    this.timerText.zIndex = 8000; 
     this.pixiApp.stage.addChild(this.timerText);
 
-    // --- SISTEMA DE VIDAS ---
     this.vidas = 20; 
-    
     const estiloVidas = new PIXI.TextStyle({
         fontFamily: 'Arial', fontSize: 36, fontWeight: 'bold',
-        fill: '#ff4444', // Rojo claro
-        stroke: '#000000', strokeThickness: 4,
+        fill: '#ff4444', stroke: '#000000', strokeThickness: 4,
         dropShadow: true, dropShadowBlur: 4,
     });
-    
     this.vidasText = new PIXI.Text({ text: 'Vidas: ' + this.vidas, style: estiloVidas });
-    this.vidasText.anchor.set(1, 0); // Anclado a la derecha
+    this.vidasText.anchor.set(1, 0); 
     this.vidasText.x = this.width - 20; 
     this.vidasText.y = 20; 
-    
+    this.vidasText.zIndex = 8000; 
     this.pixiApp.stage.addChild(this.vidasText);
     
     this.tiempoInicio = Date.now();
 
-    // --- INICIALIZAR EL GESTOR DE OLEADAS ---
+    // --- AUDIO ---
+    // Ajustamos la música según tu indicación
+    this.musicaFondo = new Audio('sounds/musica.mp3');
+    this.musicaFondo.loop = false; // <--- CAMBIO: NO BUCLE
+    this.musicaFondo.volume = 0.5;
+
+    this.sonidoDisparo = new Audio('sounds/disparo.mp3');
+    this.sonidoDisparo.volume = 0.2; 
+
+    this.sonidoGameOver = new Audio('sounds/gameover.mp3');
+    this.sonidoGameOver.volume = 0.6;
+
+    // Iniciar música al primer click
+    window.addEventListener('click', () => {
+        if (this.musicaFondo.paused && this.gestorOleadas.estadoActual !== "VICTORIA") {
+            this.musicaFondo.play().catch(e => console.log("Esperando interacción para audio"));
+        }
+    }, { once: true });
+
+
+    // GESTOR
     this.gestorOleadas = new GestorDeOleadas(this);
 
     this.pixiApp.ticker.add(this.gameLoop.bind(this));
@@ -110,9 +132,7 @@ class Juego {
     
     this.pixiApp.canvas.style.cursor = "crosshair";
 
-    // --- ESCUCHAR LA TECLA 'R' ---
     window.addEventListener("keydown", (e) => {
-        // Si presionan R (mayúscula o minúscula) Y el juego terminó
         if ((e.key === "r" || e.key === "R") && this.gestorOleadas.estadoActual === "VICTORIA") {
             this.reiniciarJuego();
         }
@@ -127,6 +147,7 @@ class Juego {
 
   gameLoop(ticker) {
     const deltaSeconds = ticker.elapsedMS / 1000;
+    const deltaFrame = ticker.deltaTime; // Usamos esto para partículas suaves
 
     // 1. Reloj
     if (this.tiempoInicio && this.gestorOleadas.estadoActual !== "VICTORIA") {
@@ -150,7 +171,7 @@ class Juego {
         }
     }
 
-    // 4. Movimiento (SOLO SI EL JUEGO SIGUE ACTIVO)
+    // 4. Movimiento Aliens
     if (this.gestorOleadas.estadoActual !== "VICTORIA") { 
         
         for (let i = this.conejitos.length - 1; i >= 0; i--) {
@@ -158,15 +179,12 @@ class Juego {
           unConejito.tick();
           unConejito.render();
     
-          // Lógica de salida y vidas
           const vaHaciaDerecha = unConejito.velocidad.x > 0;
           const vaHaciaIzquierda = unConejito.velocidad.x < 0;
-    
           const escapoPorDerecha = vaHaciaDerecha && unConejito.posicion.x > this.width + 100;
           const escapoPorIzquierda = vaHaciaIzquierda && unConejito.posicion.x < -100;
     
           if (escapoPorDerecha || escapoPorIzquierda) {
-            // AQUÍ SE USABA RESTARVIDA, AHORA FUNCIONARÁ
             if (this.gestorOleadas.estadoActual !== "VICTORIA" && this.vidas > 0) {
                 this.restarVida();
             }
@@ -176,16 +194,67 @@ class Juego {
           }
         }
     }
+
+    // 5. ACTUALIZAR PARTÍCULAS (EXPLOSIONES) - Esto corre siempre, incluso en Game Over
+    for (let i = this.particulas.length - 1; i >= 0; i--) {
+        const p = this.particulas[i];
+        
+        // Mover partícula
+        p.x += p.vx * deltaFrame;
+        p.y += p.vy * deltaFrame;
+        
+        // Reducir opacidad (Desvanecer)
+        p.alpha -= 0.03 * deltaFrame;
+        
+        // Rotar un poco para efecto visual
+        p.rotation += 0.1 * deltaFrame;
+
+        // Si es invisible, borrar
+        if (p.alpha <= 0) {
+            this.pixiApp.stage.removeChild(p);
+            this.particulas.splice(i, 1);
+        }
+    }
+  }
+
+  // --- NUEVO: SISTEMA DE EXPLOSIONES ---
+  crearExplosion(x, y) {
+    // Creamos 8 partículas por explosión
+    for (let i = 0; i < 8; i++) {
+        // Creamos un gráfico simple (cuadrado pequeño)
+        const particula = new PIXI.Graphics();
+        
+        // Color: Verde Alien (#00ff00) o Sangre (#aa0000). Usamos Verde.
+        particula.rect(0, 0, 8, 8); 
+        particula.fill(0x33ff33);
+        
+        particula.x = x;
+        particula.y = y;
+        
+        // Velocidad aleatoria en todas direcciones
+        particula.vx = (Math.random() - 0.5) * 10; 
+        particula.vy = (Math.random() - 0.5) * 10;
+        
+        particula.zIndex = 5000; // Por encima de los aliens
+        
+        this.pixiApp.stage.addChild(particula);
+        this.particulas.push(particula);
+    }
   }
 
   victoria() {
     console.log("¡SOBREVIVISTE!");
     
     this.gestorOleadas.estadoActual = "VICTORIA"; 
+    this.musicaFondo.pause();
+    this.musicaFondo.currentTime = 0;
     
+    // Si tienes sonido de victoria, ponlo aquí. Si no, silencio.
+    // this.sonidoVictoria.play(); 
+
     const estiloVictoria = new PIXI.TextStyle({
         fontFamily: 'Arial Black', fontSize: 80, fontWeight: 'bold',
-        fill: '#00ff99', // Color corregido
+        fill: '#00ff99', 
         stroke: '#004400', strokeThickness: 8,
         dropShadow: true, dropShadowBlur: 20,
     });
@@ -198,7 +267,9 @@ class Juego {
 
     this.pixiApp.stage.addChild(this.textoResultado);
 
+    // Al ganar, explotamos a todos los aliens restantes
     for (let cone of this.conejitos) {
+        this.crearExplosion(cone.posicion.x, cone.posicion.y);
         this.pixiApp.stage.removeChild(cone.container);
     }
     this.conejitos = [];
@@ -206,7 +277,6 @@ class Juego {
     this.mostrarMensajeReiniciar();
   }
 
-  // --- ESTA ERA LA FUNCIÓN QUE FALTABA ---
   restarVida() {
     this.vidas--;
     this.vidasText.text = 'Vidas: ' + this.vidas;
@@ -218,16 +288,19 @@ class Juego {
         this.derrota();
     }
   }
-  // ---------------------------------------
 
   derrota() {
     console.log("¡HAS PERDIDO!");
 
     this.gestorOleadas.estadoActual = "VICTORIA"; 
+    
+    this.musicaFondo.pause();
+    this.musicaFondo.currentTime = 0;
+    this.sonidoGameOver.play().catch(e => console.log("Falta archivo gameover"));
 
     const estiloDerrota = new PIXI.TextStyle({
         fontFamily: 'Arial Black', fontSize: 80, fontWeight: 'bold',
-        fill: '#ff0000', // Color corregido
+        fill: '#ff0000', 
         stroke: '#ffffff', strokeThickness: 6,
         dropShadow: true, dropShadowBlur: 20,
     });
@@ -270,17 +343,27 @@ class Juego {
   disparar(evento) {
     if (this.gestorOleadas.estadoActual === "VICTORIA") return;
 
+    // SONIDO
+    const sonidoClone = this.sonidoDisparo.cloneNode();
+    sonidoClone.volume = 0.2;
+    sonidoClone.play().catch(e => {});
+
     const clickPos = evento.global;
     let muertosEnEsteTiro = 0;
 
     for (let i = this.conejitos.length - 1; i >= 0; i--) {
       const cone = this.conejitos[i];
       const distancia = calcularDistancia(clickPos, cone.posicion);
-      const radioHitbox = 80; 
+      const radioHitbox = 100; 
 
       if (distancia < radioHitbox) {
         this.score++; 
         muertosEnEsteTiro++;
+        
+        // --- EFECTO DE MUERTE ---
+        this.crearExplosion(cone.posicion.x, cone.posicion.y);
+        // ------------------------
+
         this.pixiApp.stage.removeChild(cone.container);
         this.conejitos.splice(i, 1);
       }
@@ -349,6 +432,12 @@ class Juego {
     }
     this.conejitos = [];
 
+    // Limpiar partículas también
+    for (let p of this.particulas) {
+        this.pixiApp.stage.removeChild(p);
+    }
+    this.particulas = [];
+
     this.score = 0;
     this.vidas = 20;
     this.tiempoInicio = Date.now();
@@ -358,6 +447,12 @@ class Juego {
     this.vidasText.text = 'Vidas: ' + this.vidas;
     this.timerText.text = '00:00';
     this.vidasText.style.fill = '#ff4444'; 
+    
+    // Resetear audio
+    this.sonidoGameOver.pause();
+    this.sonidoGameOver.currentTime = 0;
+    this.musicaFondo.currentTime = 0;
+    this.musicaFondo.play().catch(e=>{});
 
     this.gestorOleadas.reiniciar();
     this.pixiApp.ticker.start();
