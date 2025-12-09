@@ -104,10 +104,10 @@ class Juego {
     // Ajustamos la música según tu indicación
     this.musicaFondo = new Audio('sounds/musica.mp3');
     this.musicaFondo.loop = false; // <--- CAMBIO: NO BUCLE
-    this.musicaFondo.volume = 0.5;
+    this.musicaFondo.volume = 0.1;
 
     this.sonidoDisparo = new Audio('sounds/disparo.mp3');
-    this.sonidoDisparo.volume = 0.2; 
+    this.sonidoDisparo.volume = 0.01; 
 
     this.sonidoGameOver = new Audio('sounds/gameover.mp3');
     this.sonidoGameOver.volume = 0.6;
